@@ -12,7 +12,7 @@ const CardLogsTable = () => {
       if (data) {
         const logsArray = Object.entries(data)
           .map(([id, log]) => ({ id, ...log }))
-          .sort((a, b) => b.timestamp_unix - a.timestamp_unix); // orden descendente
+          .sort((a, b) => b.timestamp_unix - a.timestamp_unix);
         setLogs(logsArray);
       } else {
         setLogs([]);
@@ -20,7 +20,7 @@ const CardLogsTable = () => {
     });
 
     return () => {
-      off(logsRef); // muy importante para evitar duplicados
+      off(logsRef);
     };
   }, []);
 
