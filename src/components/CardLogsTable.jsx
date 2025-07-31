@@ -19,6 +19,35 @@ const CardLogsTable = () => {
         60% { transform: scale(1.04) rotate(1deg); box-shadow: 0 8px 32px #facc15cc; }
         100% { transform: scale(1) rotate(0deg); box-shadow: 0 2px 8px #0002; }
       }
+      .card-hover-effect {
+        transition: transform 0.25s cubic-bezier(.4,0,.2,1), box-shadow 0.25s cubic-bezier(.4,0,.2,1);
+      }
+      .card-hover-effect:hover {
+        transform: scale(1.045);
+        box-shadow: 0 8px 32px #a5b4fc99, 0 2px 8px #0002;
+        z-index: 2;
+      }
+      @media (prefers-color-scheme: dark) {
+        body, #root, .app-bg {
+          background: linear-gradient(120deg, #232946 0%, #1a1a2e 100%) !important;
+          color: #f1f5f9 !important;
+        }
+        .card-hover-effect, .new-log-animate {
+          background: #232946 !important;
+          color: #f1f5f9 !important;
+        }
+        .card-hover-effect:hover {
+          box-shadow: 0 8px 32px #232946cc, 0 2px 8px #0008;
+        }
+        .filter-bar {
+          background: #232946cc !important;
+          color: #f1f5f9 !important;
+        }
+        .card-date {
+          background: #1a1a2e !important;
+          color: #a5b4fc !important;
+        }
+      }
       `;
       document.head.appendChild(style);
     }
@@ -112,33 +141,55 @@ const CardLogsTable = () => {
   });
 
   return (
-    <div style={{
+    <div className="app-bg" style={{
       minHeight: "100vh",
-      padding: 20,
-      background: "linear-gradient(135deg, #f8fafc 0%, #e0e7ff 60%, #c7d2fe 100%)",
-      transition: "background 0.5s"
+      minWidth: "100vw",
+      width: "100vw",
+      height: "100vh",
+      padding: 0,
+      margin: 0,
+      boxSizing: "border-box",
+      display: "flex",
+      flexDirection: "column",
+      background: "linear-gradient(120deg, #e0e7ff 0%, #c7d2fe 100%)",
+      transition: "background 0.5s",
+      position: "fixed",
+      top: 0,
+      left: 0,
+      zIndex: 0,
+      overflowY: "auto"
     }}>
       <h2 style={{
         textAlign: "center",
-        color: "#111",
-        fontSize: 38,
-        fontWeight: 900,
-        letterSpacing: 1.5,
-        marginBottom: 18
+        color: "#1e293b",
+        fontSize: 34,
+        fontWeight: 800,
+        letterSpacing: 1.2,
+        margin: "32px 0 18px 0",
+        textShadow: "0 2px 8px #c7d2fe99, 0 1px 0 #fff",
+        background: "rgba(255,255,255,0.7)",
+        borderRadius: 12,
+        padding: "12px 0 8px 0",
+        boxShadow: "0 2px 8px #c7d2fe33"
       }}>
         Registros de Acceso RFID
       </h2>
-      <div style={{
+      <div className="filter-bar" style={{
         marginBottom: 24,
         display: "flex",
         gap: 18,
         flexWrap: "wrap",
-        justifyContent: "flex-end",
-        background: "#f1f5f9",
-        borderRadius: 12,
+        justifyContent: "center",
+        background: "#f1f5f9cc",
+        borderRadius: 16,
         padding: "18px 20px 10px 20px",
-        boxShadow: "0 1px 6px #0001",
-        alignItems: "flex-end"
+        boxShadow: "0 1px 8px #c7d2fe55",
+        alignItems: "flex-end",
+        maxWidth: 1200,
+        marginLeft: "auto",
+        marginRight: "auto",
+        width: "100%",
+        zIndex: 1
       }}>
         <div style={{ display: "flex", flexDirection: "column", minWidth: 180 }}>
           <label style={{ fontSize: 13, color: "#2563eb", marginBottom: 4, fontWeight: 600 }}>Usuario</label>
@@ -200,7 +251,14 @@ const CardLogsTable = () => {
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
           gap: 24,
-          marginTop: 24
+          marginTop: 24,
+          width: "100%",
+          maxWidth: 1400,
+          marginLeft: "auto",
+          marginRight: "auto",
+          padding: "0 10px 40px 10px",
+          boxSizing: "border-box",
+          zIndex: 1
         }}>
           {filteredLogs.map((log) => (
             <div
@@ -214,10 +272,18 @@ const CardLogsTable = () => {
                 flexDirection: "column",
                 gap: 10,
                 alignItems: "center",
-                borderLeft: log.status && log.status.toLowerCase() === "autorizado" ? "6px solid #27ae60" : "6px solid #e74c3c",
+                borderLeft: (() => {
+                  if (!log.status) return "6px solid #e5e7eb";
+                  const st = log.status.toLowerCase();
+                  if (["autorizado", "granted", "permitido"].includes(st)) return "6px solid #27ae60";
+                  if (["denegado", "denied"].includes(st)) return "6px solid #e74c3c";
+                  return "6px solid #e5e7eb";
+                })(),
                 transition: "background 0.7s, box-shadow 0.7s"
               }}
-              className={newLogId === log.id ? "new-log-animate" : ""}
+              className={
+                `${newLogId === log.id ? "new-log-animate" : ""} card-hover-effect`
+              }
             >
               <div style={{
                 width: 64,
@@ -248,7 +314,7 @@ const CardLogsTable = () => {
               </div>
               <div><b>Proximidad:</b> {log.proximity ? "Sí" : "No"}</div>
               <div><b>Distancia:</b> {log.distance} cm</div>
-              <div style={{
+              <div className="card-date" style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
