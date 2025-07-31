@@ -92,8 +92,6 @@ const CardLogsTable = () => {
 
   // Filtrar por usuario, UID y estado
   const filteredLogs = logs.filter(log => {
-    // Mostrar cómo se usa timestamp en cada log
-    console.log('Filtrando log con timestamp:', log.timestamp);
     const userMatch = (log.user || "").toLowerCase().includes(userFilter.toLowerCase());
     const uidMatch = (log.cardUID || "").toLowerCase().includes(uidFilter.toLowerCase());
     // Filtro de estado robusto
@@ -118,7 +116,6 @@ const CardLogsTable = () => {
           ts = ts.replace(' ', 'T') + 'Z';
         }
         logDate = new Date(ts);
-        console.log('Comparando fecha (startDate):', ts, '->', logDate);
       }
       dateMatch = dateMatch && logDate && logDate >= new Date(startDate);
     }
@@ -130,7 +127,6 @@ const CardLogsTable = () => {
           ts = ts.replace(' ', 'T') + 'Z';
         }
         logDate = new Date(ts);
-        console.log('Comparando fecha (endDate):', ts, '->', logDate);
       }
       // Sumar 1 día para incluir el día seleccionado
       const end = new Date(endDate);
@@ -298,19 +294,58 @@ const CardLogsTable = () => {
                 color: "#2563eb",
                 boxShadow: "0 1px 4px #0001"
               }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="8" r="4" fill="#2563eb" fillOpacity="0.7"/>
-                  <path d="M4 20c0-2.21 3.58-4 8-4s8 1.79 8 4" fill="#2563eb" fillOpacity="0.7"/>
-                </svg>
+                {(() => {
+                  const user = log.user ? log.user.trim().toLowerCase() : "";
+                  if (user === "mateo") {
+                    // Ícono de hombre
+                    return (
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="8" r="4" fill="#2563eb" fillOpacity="0.7"/>
+                        <rect x="9" y="14" width="6" height="6" rx="3" fill="#2563eb" fillOpacity="0.7"/>
+                        <rect x="7" y="20" width="2" height="2" rx="1" fill="#2563eb" fillOpacity="0.7"/>
+                        <rect x="15" y="20" width="2" height="2" rx="1" fill="#2563eb" fillOpacity="0.7"/>
+                      </svg>
+                    );
+                  } else if (user === "danna") {
+                    // Ícono de mujer
+                    return (
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="8" r="4" fill="#e879f9" fillOpacity="0.7"/>
+                        <ellipse cx="12" cy="16" rx="5" ry="6" fill="#e879f9" fillOpacity="0.7"/>
+                        <rect x="11" y="22" width="2" height="2" rx="1" fill="#e879f9" fillOpacity="0.7"/>
+                      </svg>
+                    );
+                  } else if (!log.user || user === "unknown") {
+                    // Ícono de alerta
+                    return (
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" fill="#fbbf24" fillOpacity="0.8"/>
+                        <rect x="11" y="7" width="2" height="7" rx="1" fill="#fff"/>
+                        <rect x="11" y="16" width="2" height="2" rx="1" fill="#fff"/>
+                      </svg>
+                    );
+                  } else {
+                    // Ícono genérico (persona)
+                    return (
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="8" r="4" fill="#2563eb" fillOpacity="0.7"/>
+                        <path d="M4 20c0-2.21 3.58-4 8-4s8 1.79 8 4" fill="#2563eb" fillOpacity="0.7"/>
+                      </svg>
+                    );
+                  }
+                })()}
               </div>
-              <div style={{ fontWeight: 700, fontSize: 20, color: "#2c3e50", textAlign: "center" }}>{log.user}</div>
+              <div style={{ fontWeight: 700, fontSize: 20, color: "#2c3e50", textAlign: "center" }}>
+                {(!log.user || (typeof log.user === "string" && log.user.trim().toLowerCase() === "unknown")) ? "Desconocido" : log.user}
+              </div>
               <div style={{ color: "#555" }}><b>UID:</b> {log.cardUID}</div>
               <div style={{ color: ["autorizado", "granted"].includes(log.status && log.status.toLowerCase()) ? "#27ae60" : "#e74c3c", fontWeight: 600 }}>
-                {log.status && ["autorizado", "granted"].includes(log.status.toLowerCase())
-                  ? "Permitido"
-                  : log.status && ["denegado", "denied"].includes(log.status.toLowerCase())
-                    ? "Denegado"
-                    : log.status}
+                {(() => {
+                  if (log.status && ["autorizado", "granted"].includes(log.status.toLowerCase())) return "Permitido";
+                  if (log.status && ["denegado", "denied"].includes(log.status.toLowerCase())) return "Denegado";
+                  if (log.status && log.status.toLowerCase() === "unknown") return "Desconocido";
+                  return log.status;
+                })()}
               </div>
               <div><b>Proximidad:</b> {log.proximity ? "Sí" : "No"}</div>
               <div><b>Distancia:</b> {log.distance} cm</div>
