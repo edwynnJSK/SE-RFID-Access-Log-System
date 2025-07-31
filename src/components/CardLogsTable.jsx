@@ -1,9 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { database, ref, onValue, off } from "../firebase";
 
 
 const CardLogsTable = () => {
   const [logs, setLogs] = useState([]);
+  const [newLogId, setNewLogId] = useState(null);
+  // Inyectar CSS de animación solo una vez
+  useEffect(() => {
+    if (!document.head.querySelector('style[data-new-log-animate]')) {
+      const style = document.createElement('style');
+      style.setAttribute('data-new-log-animate', 'true');
+      style.innerHTML = `
+      .new-log-animate {
+        animation: highlightNewLog 1.2s cubic-bezier(.4,0,.2,1);
+      }
+      @keyframes highlightNewLog {
+        0% { transform: scale(1.12) rotate(-2deg); box-shadow: 0 0 0 #facc15cc; }
+        60% { transform: scale(1.04) rotate(1deg); box-shadow: 0 8px 32px #facc15cc; }
+        100% { transform: scale(1) rotate(0deg); box-shadow: 0 2px 8px #0002; }
+      }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+  const prevLogsRef = useRef([]);
   const [userFilter, setUserFilter] = useState("");
   const [uidFilter, setUidFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -18,9 +38,22 @@ const CardLogsTable = () => {
         const logsArray = Object.entries(data)
           .map(([id, log]) => ({ id, ...log }))
           .sort((a, b) => b.timestamp_unix - a.timestamp_unix);
+        // Detectar si hay un nuevo log
+        if (prevLogsRef.current.length > 0 && logsArray.length > prevLogsRef.current.length) {
+          // Buscar el id que no estaba antes
+          const prevIds = new Set(prevLogsRef.current.map(l => l.id));
+          const newLog = logsArray.find(l => !prevIds.has(l.id));
+          if (newLog) {
+            setNewLogId(newLog.id);
+            // Quitar el highlight después de 2 segundos
+            setTimeout(() => setNewLogId(null), 2000);
+          }
+        }
+        prevLogsRef.current = logsArray;
         setLogs(logsArray);
       } else {
         setLogs([]);
+        prevLogsRef.current = [];
       }
     });
     return () => {
@@ -30,8 +63,10 @@ const CardLogsTable = () => {
 
   // Filtrar por usuario, UID y estado
   const filteredLogs = logs.filter(log => {
-    const userMatch = log.user && log.user.toLowerCase().includes(userFilter.toLowerCase());
-    const uidMatch = log.cardUID && log.cardUID.toLowerCase().includes(uidFilter.toLowerCase());
+    // Mostrar cómo se usa timestamp en cada log
+    console.log('Filtrando log con timestamp:', log.timestamp);
+    const userMatch = (log.user || "").toLowerCase().includes(userFilter.toLowerCase());
+    const uidMatch = (log.cardUID || "").toLowerCase().includes(uidFilter.toLowerCase());
     // Filtro de estado robusto
     let statusMatch = true;
     if (statusFilter) {
@@ -44,18 +79,34 @@ const CardLogsTable = () => {
         statusMatch = statusValue === statusFilter.toLowerCase();
       }
     }
-    // Filtro por fecha
+    // Filtro por fecha usando solo timestamp
     let dateMatch = true;
     if (startDate) {
-      const logDate = new Date(log.timestamp_unix ? log.timestamp_unix * 1000 : log.timestamp);
-      dateMatch = dateMatch && logDate >= new Date(startDate);
+      let logDate = null;
+      if (log.timestamp) {
+        let ts = log.timestamp;
+        if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(ts)) {
+          ts = ts.replace(' ', 'T') + 'Z';
+        }
+        logDate = new Date(ts);
+        console.log('Comparando fecha (startDate):', ts, '->', logDate);
+      }
+      dateMatch = dateMatch && logDate && logDate >= new Date(startDate);
     }
     if (endDate) {
-      const logDate = new Date(log.timestamp_unix ? log.timestamp_unix * 1000 : log.timestamp);
+      let logDate = null;
+      if (log.timestamp) {
+        let ts = log.timestamp;
+        if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(ts)) {
+          ts = ts.replace(' ', 'T') + 'Z';
+        }
+        logDate = new Date(ts);
+        console.log('Comparando fecha (endDate):', ts, '->', logDate);
+      }
       // Sumar 1 día para incluir el día seleccionado
       const end = new Date(endDate);
       end.setDate(end.getDate() + 1);
-      dateMatch = dateMatch && logDate < end;
+      dateMatch = dateMatch && logDate && logDate < end;
     }
     return userMatch && uidMatch && statusMatch && dateMatch;
   });
@@ -152,17 +203,22 @@ const CardLogsTable = () => {
           marginTop: 24
         }}>
           {filteredLogs.map((log) => (
-            <div key={log.id} style={{
-              background: "#f9f9f9",
-              borderRadius: 14,
-              boxShadow: "0 2px 8px #0002",
-              padding: 24,
-              display: "flex",
-              flexDirection: "column",
-              gap: 10,
-              alignItems: "center",
-              borderLeft: log.status && log.status.toLowerCase() === "autorizado" ? "6px solid #27ae60" : "6px solid #e74c3c"
-            }}>
+            <div
+              key={log.id}
+              style={{
+                background: newLogId === log.id ? "#fef9c3" : "#f9f9f9",
+                borderRadius: 14,
+                boxShadow: newLogId === log.id ? "0 4px 16px #facc15cc" : "0 2px 8px #0002",
+                padding: 24,
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+                alignItems: "center",
+                borderLeft: log.status && log.status.toLowerCase() === "autorizado" ? "6px solid #27ae60" : "6px solid #e74c3c",
+                transition: "background 0.7s, box-shadow 0.7s"
+              }}
+              className={newLogId === log.id ? "new-log-animate" : ""}
+            >
               <div style={{
                 width: 64,
                 height: 64,
@@ -208,9 +264,19 @@ const CardLogsTable = () => {
                   <circle cx="12" cy="12" r="10" stroke="#3730a3" strokeWidth="2" fill="#fff"/>
                   <path d="M12 7v5l3 3" stroke="#3730a3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                {log.timestamp_unix
-                  ? new Date(log.timestamp_unix * 1000).toLocaleString()
-                  : log.timestamp}
+                {(() => {
+                  if (log.timestamp) {
+                    // Si el formato es 'YYYY-MM-DD HH:mm:ss', mostrarlo tal cual
+                    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(log.timestamp)) {
+                      return log.timestamp;
+                    }
+                    // Si no, intentar parsear y mostrar local
+                    const d = new Date(log.timestamp);
+                    return isNaN(d.getTime()) ? log.timestamp : d.toLocaleString();
+                  } else {
+                    return "Fecha no disponible";
+                  }
+                })()}
               </div>
             </div>
           ))}
